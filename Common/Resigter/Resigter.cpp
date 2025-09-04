@@ -27,7 +27,8 @@ Resigter::Resigter(const char* name, uint32_t offset)
 }
 Bit_Config& Bit_Config::operator = (unsigned int val)
 {
-    uint32_t mask = (uint32_t)((1 << (this->End_Addr - this->Start_Addr + 1)) - 1);
+    uint32_t width = (this->End_Addr >= this->Start_Addr) ? (this->End_Addr - this->Start_Addr + 1) : 0;
+    uint32_t mask = (width >= 32) ? 0xFFFFFFFFu : ((1u << width) - 1u);
     if ( (this->Permit == e_Permit:: ReadWrite) || (this->Permit == e_Permit::Write) ) 
     {
         this->Data = val &mask;
@@ -37,7 +38,7 @@ Bit_Config& Bit_Config::operator = (unsigned int val)
 
 Bit_Config::operator unsigned int () const 
 {
-    if ( (this->Permit == e_Permit:: ReadWrite) || (this->Permit == e_Permit::Write) ) 
+    if ( (this->Permit == e_Permit:: ReadWrite) || (this->Permit == e_Permit::Read) ) 
     {
         return this->Data;
     }
@@ -62,7 +63,7 @@ Bit_Config& Resigter::operator[] (const char* name)
 {
   for (int i=0; i<Bitset.size(); i++)
   {
-    if (0 == strcmp(Bitset.at(i)->Bit_Name,name));
+    if (0 == strcmp(Bitset.at(i)->Bit_Name,name))
     {
         return *(Bitset.at(i));
     }

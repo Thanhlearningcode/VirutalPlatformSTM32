@@ -49,4 +49,8 @@ public:
     bool Received(Data_Package* package);
     // Enqueue a DMA memory write (user-facing API)
     bool EnqueueToSRAM(uint32_t sramAddress, const uint8_t* data, size_t len);
+    // Read back from internal SRAM (for tests/demo)
+    bool ReadSRAM(uint32_t sramAddress, uint8_t* out, size_t len);
+    // Write a DMA register (helper for tests)
+    void WriteReg(uint32_t offset, uint32_t value);
 };

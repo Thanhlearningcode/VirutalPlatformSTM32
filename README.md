@@ -1,16 +1,16 @@
 # 🧠 Virtual STM32 Platform
 
-Dự án **Virtual STM32** là một hệ thống mô phỏng phần mềm vi điều khiển STM32, được thiết kế để hỗ trợ học tập và phát triển hệ thống nhúng theo mô hình chuẩn hóa. Dự án tập trung vào việc xây dựng **môi trường mô phỏng vi điều khiển** bằng C++ thuần, tích hợp kiểm thử với Python, tự động build bằng Bash script và Makefile để mô phỏng hoạt động tương tự như một firmware thực.
+Dự án Virtual STM32 là một hệ thống mô phỏng phần mềm vi điều khiển STM32, hỗ trợ học tập và phát triển hệ thống nhúng theo mô hình chuẩn. Dự án xây dựng môi trường mô phỏng bằng C++ (thuần), có tích hợp kiểm thử và một UI demo đơn giản.
 
 ---
 
 ## 🏗️ Kiến trúc tổng quan
 
-- ⚙️ **Ngôn ngữ chính:** `C++17`  
-- 🧪 **Kiểm thử:** `Python` (pytest hoặc script test đơn giản)
-- 🔧 **Build system:** `Makefile`  
-- 📜 **Tự động hóa:** `Bash script` (`build.sh`, `run_test.sh`, v.v.)
-- 💡 **Mục tiêu:** Mô phỏng register, bus, GPIO, và cấu trúc lõi CPU (ARM Cortex-M)
+- ⚙️ Ngôn ngữ: C++14/17
+- 🧪 Kiểm thử: Python (minh hoạ) + test C++ nhỏ
+- 🔧 Build: Makefile
+- 📜 Tự động hóa: Bash + Python script
+- 💡 Mục tiêu: Mô phỏng register, bus, GPIO, DMA, UART và lõi CPU (Cortex‑M)
 
 ---
 
@@ -18,27 +18,77 @@ Dự án **Virtual STM32** là một hệ thống mô phỏng phần mềm vi đ
 
 | Thư mục | Nội dung |
 |--------|---------|
-| `Common/` | Các định nghĩa dùng chung (enum, macro, signal class...) |
-| `CorTex-M3/` | Mô phỏng lõi CPU ARM Cortex-M3 |
-| `SRAM/` | Mô phỏng bộ nhớ SRAM nội bộ |
-| `DMA/` | Mô phỏng bộ điều khiển truy cập trực tiếp DMA |
-| `ENV_ARM/` | Tập tin cấu hình môi trường mô phỏng ARM |
-| `README.md` | Giới thiệu tổng thể dự án |
+| `Common/` | Định nghĩa dùng chung (bus, registry, port, register model) |
+| `CorTex-M3/` | Mô phỏng lõi CPU ARM Cortex‑M3 |
+| `DMA/` | Mô phỏng DMA, UART, SPI, I2C, CAN, SRAM, kèm test |
+| `ENV_ARM/` | Cấu hình môi trường mô phỏng |
+| `VirtualPlatform_Stm32/` | UI web demo + backend Python |
+| `README.md` | Tài liệu này |
 
 ---
 
 ## 🚀 Tính năng nổi bật
 
-- ✨ Mô hình hóa bộ nhớ, thanh ghi, và bus giao tiếp tương tự STM32
-- 🔁 Giao tiếp tín hiệu giữa các module với lớp `Signal<Type>`
-- 🧵 Thiết kế theo hướng **modular** dễ mở rộng (Port, CPU, RAM, DMA, ...)
-- 🧪 Tích hợp test Python: xác minh hành vi mô phỏng thông qua script tự động
-- ⚡ Bash script giúp build & test nhanh gọn
-- 🛠️ Sử dụng Makefile chuẩn hóa để build như firmware thật
+- Mô hình hoá bộ nhớ, thanh ghi và bus tương tự STM32
+- Modular, dễ mở rộng (Port, CPU, RAM, DMA, UART, ...)
+- DMA nền thread và UART FIFO thread‑safe (condition_variable + unique_lock)
+- Makefile chuẩn, dễ build và thử nghiệm nhanh
 
 ---
 
-## 🧪 Ví dụ test (Python)
+## ⚙️ Yêu cầu môi trường
+
+- GCC/G++ (C++14 trở lên), Make
+- Python 3.8+ (để chạy UI demo)
+
+---
+
+## 🧵 UART → DMA (threaded, condition_variable + unique_lock)
+
+Đã triển khai truyền dữ liệu từ UART sang SRAM thông qua DMA theo kiểu bất đồng bộ:
+
+- UART có TX FIFO thread‑safe (mutex + condition_variable)
+- DMA có worker thread xử lý copy sang SRAM
+- Ghi thanh ghi DMA (CCR/CPAR/CMAR/CNDTR) sẽ kích hoạt transfer
+- DMA đọc dữ liệu UART qua PeripheralRegistry tại địa chỉ 0x40000000
+
+Build & chạy demo C++:
+
+```bash
+cd DMA
+make clean
+make test
+./test_dma
+```
+
+Kỳ vọng: In ra dump SRAM có chuỗi “Hello from UART to DMA” và PASS.
+
+Tệp chính:
+- `DMA/Uart.h`, `DMA/Uart.cpp`: UART + FIFO TX + condition_variable/unique_lock
+- `DMA/DMA.h`, `DMA/DMA.cpp`: Worker thread, callback thanh ghi, queue transfer
+- `DMA/DMA_Resigter.*`: Map thanh ghi DMA + callback ghi
+- `DMA/SRAM.*`: SRAM thread‑safe
+- `Common/BusInterface/PeripheralRegistry.*`: Đăng ký ngoại vi và đọc theo địa chỉ
+- `DMA/Makefile`, `DMA/test_dma.cpp`: Build + demo
+
+---
+
+## 🖥️ Chạy Web UI (demo)
+
+UI mô phỏng ngoại vi cơ bản (UART/SPI/I2C/Timer/DMA/CAN) bằng Python HTTP server:
+
+```bash
+cd VirtualPlatform_Stm32
+python3 run_virtual_platform.py
+```
+
+Mở trình duyệt: http://localhost:8081
+
+Lưu ý: Backend Python mang tính minh hoạ; luồng UART→DMA gốc hiện thực bằng C++ ở thư mục `DMA/`.
+
+---
+
+## 🧪 Ví dụ test (Python, minh hoạ)
 
 ```python
 # test_gpio.py
@@ -47,3 +97,11 @@ def test_port_signal_read():
     signal = Signal(1)
     port(signal)
     assert port.Read_Data() == 1
+```
+
+---
+
+## 📎 Ghi chú
+
+- Nếu cần tích hợp C++ backend vào UI Python (thay vì demo), có thể mở API đọc/ghi thanh ghi để gọi vào lớp DMA/UART.
+- Có thể tắt log debug trong `DMA/*.cpp` khi ổn định.

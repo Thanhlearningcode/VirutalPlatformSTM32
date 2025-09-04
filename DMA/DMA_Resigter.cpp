@@ -1,5 +1,11 @@
 #include "DMA_Resigter.h"
 
+// C++14 requires definitions for odr-use of static constexpr integral members
+constexpr uint32_t DMA_RegisterOffset::CCR;
+constexpr uint32_t DMA_RegisterOffset::CNDTR;
+constexpr uint32_t DMA_RegisterOffset::CPAR;
+constexpr uint32_t DMA_RegisterOffset::CMAR;
+
 DMA_Resigter::DMA_Resigter (const char* _name) 
 {
     this->Name = _name;
@@ -54,7 +60,10 @@ void DMA_Resigter::WriteResigter(uint32_t offset, uint32_t val)
     if (it != RegMap.end()) 
     {
         *(it->second) = val;
-    if (writeCb) writeCb(offset, val);
+        if (writeCb) {
+            printf("DMA_Reg: write offset=0x%08x val=0x%08x -> callback\n", offset, val);
+            writeCb(offset, val);
+        }
     } 
     else
     {
