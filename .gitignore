@@ -1,0 +1,36 @@
+# === Build directories ===
+build/
+*/build/
+**/build/
+
+# === CMake generated files ===
+CMakeFiles/
+cmake_install.cmake
+
+
+
+# === Executables ===
+*.elf
+*.bin
+*.hex
+*.out
+*.exe
+*.map
+*.a
+*.o
+*.obj
+
+# === Editor / OS specific ===
+.DS_Store
+*.swp
+*.swo
+*.swn
+*~
+.vscode/
+.idea/
+*.user
+*.code-workspace
+
+# === GTest outputs (optional) ===
+test_detail.xml
+test_results.xml
